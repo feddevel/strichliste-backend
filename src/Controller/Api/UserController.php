@@ -11,27 +11,16 @@ use App\Serializer\UserSerializer;
 use App\Service\UserService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
-/**
- * @Route("/api/user")
- */
+#[Route('/api/user')]
 class UserController extends AbstractController {
+    public function __construct(private readonly UserSerializer $userSerializer) {}
 
-    /**
-     * @var UserSerializer
-     */
-    private $userSerializer;
-
-    function __construct(UserSerializer $userSerializer) {
-        $this->userSerializer = $userSerializer;
-    }
-
-    /**
-     * @Route(methods="GET")
-     */
-    function list(Request $request, UserService $userService, EntityManagerInterface $entityManager) {
+    #[Route(methods: ['GET'])]
+    public function list(Request $request, UserService $userService, EntityManagerInterface $entityManager): JsonResponse {
         $active = $request->query->get('active');
 
         $staleDateTime = $userService->getStaleDateTime();
@@ -45,29 +34,22 @@ class UserController extends AbstractController {
             $users = $userRepository->findAll();
         }
 
-        usort($users, function (User $a, User $b) {
-           return strnatcasecmp($a->getName(), $b->getName());
-        });
+        usort($users, static fn (User $a, User $b): int => strnatcasecmp((string) $a->getName(), (string) $b->getName()));
 
         return $this->json([
-            'users' => array_map(function (User $user) {
-                return $this->userSerializer->serialize($user);
-            }, $users)
+            'users' => array_map(fn (User $user) => $this->userSerializer->serialize($user), $users),
         ]);
     }
 
-    /**
-     * @Route(methods="POST")
-     */
-    function createUser(Request $request, EntityManagerInterface $entityManager) {
-
+    #[Route(methods: ['POST'])]
+    public function createUser(Request $request, EntityManagerInterface $entityManager): JsonResponse {
         $name = $request->request->get('name');
         if (!$name) {
             throw new ParameterMissingException('name');
         }
 
         // TODO: Use sanitize-helper
-        $name = trim($name);
+        $name = mb_trim($name);
         $name = preg_replace('/[\x00-\x1F\x7F]/u', '', $name);
 
         if (!$name || mb_strlen($name) > 64) {
@@ -87,7 +69,7 @@ class UserController extends AbstractController {
                 throw new ParameterInvalidException('email');
             }
 
-            $user->setEmail(trim($email));
+            $user->setEmail(mb_trim($email));
         }
 
         $entityManager->persist($user);
@@ -98,10 +80,8 @@ class UserController extends AbstractController {
         ]);
     }
 
-    /**
-     * @Route("/search", methods="GET")
-     */
-    function search(Request $request, EntityManagerInterface $entityManager) {
+    #[Route('/search', methods: ['GET'])]
+    public function search(Request $request, EntityManagerInterface $entityManager): JsonResponse {
         $query = $request->query->get('query');
         $limit = $request->query->get('limit', 25);
 
@@ -115,17 +95,13 @@ class UserController extends AbstractController {
             ->getResult();
 
         return $this->json([
-            'count' => count($results),
-            'users' => array_map(function (User $user) {
-                return $this->userSerializer->serialize($user);
-            }, $results),
+            'count' => \count($results),
+            'users' => array_map(fn (User $user) => $this->userSerializer->serialize($user), $results),
         ]);
     }
 
-    /**
-     * @Route("/{userId}", methods="GET")
-     */
-    function user($userId, EntityManagerInterface $entityManager) {
+    #[Route('/{userId}', methods: ['GET'])]
+    public function user($userId, EntityManagerInterface $entityManager): JsonResponse {
         $user = $entityManager->getRepository(User::class)->findByIdentifier($userId);
         if (!$user) {
             throw new UserNotFoundException($userId);
@@ -136,10 +112,8 @@ class UserController extends AbstractController {
         ]);
     }
 
-    /**
-     * @Route("/{userId}", methods="POST")
-     */
-    function updateUser($userId, Request $request, EntityManagerInterface $entityManager) {
+    #[Route('/{userId}', methods: ['POST'])]
+    public function updateUser($userId, Request $request, EntityManagerInterface $entityManager): JsonResponse {
         $user = $entityManager->getRepository(User::class)->findByIdentifier($userId);
         if (!$user) {
             throw new UserNotFoundException($userId);
@@ -151,7 +125,7 @@ class UserController extends AbstractController {
         }
 
         if ($name) {
-            $name = trim($name);
+            $name = mb_trim($name);
             $name = preg_replace('/[\x00-\x1F\x7F]/u', '', $name);
 
             if ($name !== $user->getName() && $entityManager->getRepository(User::class)->findByName($name)) {

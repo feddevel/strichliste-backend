@@ -14,28 +14,15 @@ use App\Exception\TransactionInvalidException;
 use App\Exception\TransactionNotDeletableException;
 use App\Exception\TransactionNotFoundException;
 use App\Exception\UserNotFoundException;
+use DateInterval;
+use DateTime;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 
 class TransactionService {
+    public function __construct(private readonly SettingsService $settingsService, private readonly EntityManagerInterface $entityManager) {}
 
-    /**
-     * @var EntityManagerInterface
-     */
-    private $entityManager;
-
-    /**
-     * @var SettingsService
-     */
-    private $settingsService;
-
-    function __construct(SettingsService $settingsService, EntityManagerInterface $entityManager) {
-        $this->entityManager = $entityManager;
-        $this->settingsService = $settingsService;
-    }
-
-
-    function isDeletable(Transaction $transaction): bool {
+    public function isDeletable(Transaction $transaction): bool {
         if ($transaction->isDeleted()) {
             return false;
         }
@@ -46,8 +33,8 @@ class TransactionService {
 
         $deletionTimeout = $this->settingsService->getOrDefault('payment.undo.timeout');
         if ($deletionTimeout) {
-            $dateTime = new \DateTime();
-            $dateTime->sub(\DateInterval::createFromDateString($deletionTimeout));
+            $dateTime = new DateTime();
+            $dateTime->sub(DateInterval::createFromDateString($deletionTimeout));
 
             if ($transaction->getCreated() < $dateTime) {
                 return false;
@@ -58,25 +45,17 @@ class TransactionService {
     }
 
     /**
-     * @param User $user
-     * @param int|null $amount
-     * @param null|string $comment
-     * @param int|null $quantity
-     * @param int|null $articleId
-     * @param int|null $recipientId
      * @throws AccountBalanceBoundaryException
      * @throws TransactionBoundaryException
      * @throws TransactionInvalidException
      * @throws ParameterNotFoundException
-     * @return Transaction
      */
-    function doTransaction(User $user, ?int $amount, string $comment = null, ?int $quantity = 1, ?int $articleId = null, ?int $recipientId = null): Transaction {
-
+    public function doTransaction(User $user, ?int $amount, ?string $comment = null, ?int $quantity = 1, ?int $articleId = null, ?int $recipientId = null): Transaction {
         if (($recipientId || $articleId) && $amount > 0) {
-            throw new TransactionInvalidException('Amount can\'t be positive when sending money or buying an article');
+            throw new TransactionInvalidException("Amount can't be positive when sending money or buying an article");
         }
 
-        return $this->entityManager->transactional(function () use ($user, $amount, $comment, $quantity, $articleId, $recipientId) {
+        return $this->entityManager->transactional(function () use ($user, $amount, $comment, $quantity, $articleId, $recipientId): Transaction {
             $transaction = new Transaction();
             $transaction->setUser($user);
             $transaction->setComment($comment);
@@ -141,16 +120,13 @@ class TransactionService {
     }
 
     /**
-     * @param int $transactionId
      * @throws AccountBalanceBoundaryException
      * @throws TransactionBoundaryException
      * @throws TransactionInvalidException
      * @throws ParameterNotFoundException
-     * @return Transaction
      */
-    function revertTransaction(int $transactionId): Transaction {
+    public function revertTransaction(int $transactionId): Transaction {
         return $this->entityManager->transactional(function () use ($transactionId) {
-
             $transaction = $this->entityManager->getRepository(Transaction::class)->find($transactionId, LockMode::PESSIMISTIC_WRITE);
             if (!$transaction) {
                 throw new TransactionNotFoundException($transactionId);
@@ -183,13 +159,12 @@ class TransactionService {
     }
 
     /**
-     * @param Transaction $transaction
      * @throws AccountBalanceBoundaryException
      * @throws TransactionBoundaryException
      * @throws TransactionInvalidException
      * @throws ParameterNotFoundException
      */
-    private function undoTransaction(Transaction $transaction) {
+    private function undoTransaction(Transaction $transaction): void {
         $user = $transaction->getUser();
         $this->checkTransactionBoundary($transaction->getAmount());
 
@@ -208,11 +183,12 @@ class TransactionService {
 
     /**
      * @param int $amount
+     *
      * @throws TransactionBoundaryException
      * @throws TransactionInvalidException
      * @throws ParameterNotFoundException
      */
-    private function checkTransactionBoundary($amount) {
+    private function checkTransactionBoundary(float|int|null $amount): void {
         if (!$amount) {
             throw new TransactionInvalidException();
         }
@@ -229,11 +205,10 @@ class TransactionService {
     }
 
     /**
-     * @param User $user
      * @throws AccountBalanceBoundaryException
      * @throws ParameterNotFoundException
      */
-    private function checkAccountBalanceBoundary(User $user) {
+    private function checkAccountBalanceBoundary(User $user): void {
         $balance = $user->getBalance();
 
         $upper = $this->settingsService->getOrDefault('account.boundary.upper', false);
