@@ -20,9 +20,10 @@ Curious to see how it works? Check out our Demo at https://demo.strichliste.org
 
 ### Recommended workflow
 
-SQLite is now the recommended development database because it is lightweight,
-requires no separate database server, and works well inside Fedora Silverblue
-`toolbox` containers and VS Code terminals.
+The backend supports both SQLite and MySQL for local development. SQLite is
+lightweight and easy to start with, while MySQL is a good fit when you want to
+mirror a production-like database setup. Choose whichever option matches your
+workflow.
 
 1. Install the PHP dependencies:
 
@@ -36,8 +37,19 @@ requires no separate database server, and works well inside Fedora Silverblue
    cp .env.dist .env
    ```
 
-3. Use the default SQLite database URL from `.env`, or adjust `DATABASE_URL` if
-   you prefer another database.
+3. Pick one database option and set `DATABASE_URL` accordingly:
+
+   - **SQLite** (default in `.env`):
+
+     ```dotenv
+     DATABASE_URL="sqlite:///%kernel.project_dir%/var/data.db"
+     ```
+
+   - **MySQL**:
+
+     ```dotenv
+     DATABASE_URL="mysql://strichliste:32YourPassWord42@127.0.0.1:3306/strichliste?serverVersion=8.0.36&charset=utf8mb4"
+     ```
 
 4. Create the database schema:
 
@@ -61,18 +73,37 @@ this project in VS Code is to install the development tools inside a
    toolbox enter strichliste-dev
    ```
 
-2. Install PHP, Composer, and SQLite support inside the toolbox:
+2. Install PHP, Composer, and the database support you want inside the toolbox:
 
-   ```bash
-   sudo dnf install -y php php-cli php-sqlite php-xml php-mbstring php-json php-intl php-zip composer sqlite
-   ```
+   - **SQLite**
 
-3. Verify that the tools are available:
+     ```bash
+     sudo dnf install -y php php-cli php-sqlite php-xml php-mbstring php-json php-intl php-zip composer sqlite
+     ```
+
+   - **MySQL**
+
+     ```bash
+     sudo dnf install -y php php-cli php-mysqlnd php-xml php-mbstring php-json php-intl php-zip composer community-mysql community-mysql-server
+     ```
+
+3. Verify that the tools are available for your chosen setup:
 
    ```bash
    php -v
    composer --version
+   ```
+
+   For SQLite also check:
+
+   ```bash
    sqlite3 --version
+   ```
+
+   For MySQL also check:
+
+   ```bash
+   mysql --version
    ```
 
 4. In VS Code, install the Remote - Containers / Dev Containers or Toolbox
@@ -91,7 +122,11 @@ this project in VS Code is to install the development tools inside a
    cp .env.dist .env
    ```
 
-7. Use the default SQLite configuration and create the schema:
+7. Configure `.env` for either SQLite or MySQL, then create the schema:
+
+   - **SQLite** keeps the default `DATABASE_URL` from `.env.dist`.
+   - **MySQL** should replace `DATABASE_URL` with your local or remote MySQL
+     connection string.
 
    ```bash
    mkdir -p var
@@ -106,25 +141,6 @@ this project in VS Code is to install the development tools inside a
 
    You can then open `http://127.0.0.1:8000` in your browser.
 
-#### Optional: use MySQL instead
-
-If you already manage MySQL locally or remotely, strichliste still supports it.
-Install the MySQL PHP extension and point `DATABASE_URL` to your instance, for
-example:
-
-```bash
-sudo dnf install -y php-mysqlnd community-mysql community-mysql-server
-```
-
-```dotenv
-DATABASE_URL="mysql://strichliste:32YourPassWord42@127.0.0.1:3306/strichliste?serverVersion=8.0.36&charset=utf8mb4"
-```
-
-Then create the schema as usual:
-
-```bash
-php bin/console doctrine:schema:create
-```
 
 ### Ansible/Vagrant
 
