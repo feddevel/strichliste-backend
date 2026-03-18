@@ -17,6 +17,121 @@ It’s as simple as that!
 
 Curious to see how it works? Check out our Demo at https://demo.strichliste.org
 
+### Recommended workflow
+
+1. Install the PHP dependencies:
+
+   ```bash
+   composer install
+   ```
+
+2. Create a local environment file:
+
+   ```bash
+   cp .env.dist .env
+   ```
+
+3. Edit `.env` and configure `DATABASE_URL` for your local database.
+
+4. Create the database schema:
+
+   ```bash
+   php bin/console doctrine:schema:create
+   ```
+
+5. Start the application with your usual local Symfony/PHP web server setup.
+
+
+### Ansible/Vagrant
+
+The `contrib/ansible` directory contains an optional Ansible + Vagrant setup for
+provisioning a VM. That setup is useful if you specifically want to develop or
+test inside a virtual machine, but it is not required for normal local
+development in VS Code.
+
+
+### Fedora Silverblue / Toolbx setup
+
+If you are using **Fedora Silverblue**, the base OS is immutable, so you need a
+**Toolbx** container for development tools like PHP and Composer.
+
+#### 1. Create or enter a Toolbox container
+
+```bash
+# Create a toolbox (if you haven't already)
+toolbox create php-workspace
+
+# Enter the toolbox
+toolbox enter php-workspace
+```
+
+#### 2. Update packages and install PHP
+
+Inside the toolbox:
+
+```bash
+sudo dnf update -y
+sudo dnf install -y php php-cli php-mbstring php-xml unzip curl git
+```
+
+* `php-cli` – command-line PHP
+* `php-mbstring` & `php-xml` – common Composer dependencies
+* `unzip` & `curl` – required for Composer installation
+* `git` – needed for many PHP projects
+
+#### 3. Install Composer
+
+Still inside the toolbox:
+
+```bash
+# Download Composer installer
+curl -sS https://getcomposer.org/installer -o composer-setup.php
+
+# Verify installer (optional)
+HASH=$(curl -sS https://composer.github.io/installer.sig)
+php -r "if (hash_file('sha384', 'composer-setup.php') === '$HASH') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+
+# Install globally
+sudo php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+
+# Remove installer
+rm composer-setup.php
+
+# Test
+composer --version
+```
+
+#### 4. Configure VS Code to use the toolbox environment
+
+**Option A – Open VS Code inside the toolbox**
+
+1. Make sure VS Code is installed on your host (Silverblue).
+2. Install the **Remote - Containers** extension in VS Code.
+3. Use **"Remote - Containers: Open Folder in Container"** and point it to the
+   `php-workspace` container so VS Code runs inside it.
+
+**Option B – Use the VS Code integrated terminal**
+
+1. Open your project in VS Code.
+2. Open the terminal (<kbd>Ctrl</kbd> + <kbd>\`</kbd>) and enter your toolbox:
+
+```bash
+toolbox enter php-workspace
+```
+
+Any Composer commands you run in that terminal will execute inside the toolbox.
+
+#### 5. Optional: alias Composer in your host shell
+
+Add the following to `~/.bashrc` or `~/.zshrc` on your host so you can run
+`composer` from the VS Code terminal without manually entering the toolbox each
+time:
+
+```bash
+alias composer="toolbox run --container php-workspace composer"
+```
+
+
 ## API Documentation
 
 For a full documentation or the strichliste2 API, please see the API.md file.
