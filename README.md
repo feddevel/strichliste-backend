@@ -17,6 +17,36 @@ It’s as simple as that!
 
 Curious to see how it works? Check out our Demo at https://demo.strichliste.org
 
+### MySQL Driver Installation
+
+Before running the application, make sure the PHP MySQL (PDO) extension is installed on your system.
+
+**Ubuntu / Debian:**
+
+```bash
+sudo apt-get update
+sudo apt-get install -y php-mysql
+```
+
+**Fedora / RHEL / CentOS:**
+
+```bash
+sudo dnf install -y php-mysqlnd
+```
+
+**macOS (Homebrew):**
+
+```bash
+brew install php
+# php-pdo_mysql is bundled with the Homebrew PHP formula
+```
+
+After installing the extension, restart your web server (e.g. `sudo systemctl restart apache2` or `sudo systemctl restart php-fpm`) and verify the extension is active:
+
+```bash
+php -m | grep pdo_mysql
+```
+
 ### Recommended workflow
 
 1. Install the PHP dependencies:
@@ -71,11 +101,12 @@ Inside the toolbox:
 
 ```bash
 sudo dnf update -y
-sudo dnf install -y php php-cli php-mbstring php-xml unzip curl git
+sudo dnf install -y php php-cli php-mbstring php-xml php-mysqlnd unzip curl git
 ```
 
 * `php-cli` – command-line PHP
 * `php-mbstring` & `php-xml` – common Composer dependencies
+* `php-mysqlnd` – MySQL / PDO MySQL driver (required for the database connection)
 * `unzip` & `curl` – required for Composer installation
 * `git` – needed for many PHP projects
 
