@@ -17,6 +17,39 @@ It’s as simple as that!
 
 Curious to see how it works? Check out our Demo at https://demo.strichliste.org
 
+### Recommended workflow
+
+1. Install the PHP dependencies:
+
+   ```bash
+   composer install
+   ```
+
+2. Create a local environment file:
+
+   ```bash
+   cp .env.dist .env
+   ```
+
+3. Edit `.env` and configure `DATABASE_URL` for your local database.
+
+4. Create the database schema:
+
+   ```bash
+   php bin/console doctrine:schema:create
+   ```
+
+5. Start the application with your usual local Symfony/PHP web server setup.
+
+
+### Ansible/Vagrant
+
+The `contrib/ansible` directory contains an optional Ansible + Vagrant setup for
+provisioning a VM. That setup is useful if you specifically want to develop or
+test inside a virtual machine, but it is not required for normal local
+development in VS Code.
+
+
 ## API Documentation
 
 For a full documentation or the strichliste2 API, please see the API.md file.
