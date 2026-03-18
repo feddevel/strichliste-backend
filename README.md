@@ -20,6 +20,10 @@ Curious to see how it works? Check out our Demo at https://demo.strichliste.org
 
 ### Recommended workflow
 
+SQLite is now the recommended development database because it is lightweight,
+requires no separate database server, and works well inside Fedora Silverblue
+`toolbox` containers and VS Code terminals.
+
 1. Install the PHP dependencies:
 
    ```bash
@@ -32,11 +36,13 @@ Curious to see how it works? Check out our Demo at https://demo.strichliste.org
    cp .env.dist .env
    ```
 
-3. Edit `.env` and configure `DATABASE_URL` for your local database.
+3. Use the default SQLite database URL from `.env`, or adjust `DATABASE_URL` if
+   you prefer another database.
 
 4. Create the database schema:
 
    ```bash
+   mkdir -p var
    php bin/console doctrine:schema:create
    ```
 
@@ -55,10 +61,10 @@ this project in VS Code is to install the development tools inside a
    toolbox enter strichliste-dev
    ```
 
-2. Install PHP, Composer and MySQL client/server packages inside the toolbox:
+2. Install PHP, Composer, and SQLite support inside the toolbox:
 
    ```bash
-   sudo dnf install -y php php-cli php-mysqlnd php-xml php-mbstring php-json php-intl php-zip composer community-mysql community-mysql-server
+   sudo dnf install -y php php-cli php-sqlite php-xml php-mbstring php-json php-intl php-zip composer sqlite
    ```
 
 3. Verify that the tools are available:
@@ -66,7 +72,7 @@ this project in VS Code is to install the development tools inside a
    ```bash
    php -v
    composer --version
-   mysql --version
+   sqlite3 --version
    ```
 
 4. In VS Code, install the Remote - Containers / Dev Containers or Toolbox
@@ -85,32 +91,40 @@ this project in VS Code is to install the development tools inside a
    cp .env.dist .env
    ```
 
-7. Start MySQL inside the toolbox and create a database for the application:
+7. Use the default SQLite configuration and create the schema:
 
    ```bash
-   sudo mkdir -p /var/lib/mysql
-   sudo mysql_install_db --user=$(whoami) --datadir=/var/lib/mysql
-   mysqld_safe --datadir=/var/lib/mysql &
-   mysql -u root -e "CREATE DATABASE strichliste CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-   ```
-
-   If you already manage MySQL elsewhere, you can skip the local server setup
-   and just point `DATABASE_URL` to that instance.
-
-8. Edit `.env` and configure `DATABASE_URL`, for example:
-
-   ```dotenv
-   DATABASE_URL="mysql://root:@127.0.0.1:3306/strichliste?serverVersion=8.0"
-   ```
-
-9. Create the schema and start the local PHP server:
-
-   ```bash
+   mkdir -p var
    php bin/console doctrine:schema:create
+   ```
+
+8. Start the local PHP server:
+
+   ```bash
    php -S 127.0.0.1:8000 -t public
    ```
 
    You can then open `http://127.0.0.1:8000` in your browser.
+
+#### Optional: use MySQL instead
+
+If you already manage MySQL locally or remotely, strichliste still supports it.
+Install the MySQL PHP extension and point `DATABASE_URL` to your instance, for
+example:
+
+```bash
+sudo dnf install -y php-mysqlnd community-mysql community-mysql-server
+```
+
+```dotenv
+DATABASE_URL="mysql://strichliste:32YourPassWord42@127.0.0.1:3306/strichliste?serverVersion=8.0.36&charset=utf8mb4"
+```
+
+Then create the schema as usual:
+
+```bash
+php bin/console doctrine:schema:create
+```
 
 ### Ansible/Vagrant
 
@@ -127,5 +141,3 @@ For a full documentation or the strichliste2 API, please see the API.md file.
 ## Config Documentation
 
 For documentation of the config parameters in `config/services.yml`, please read the Config.md file.
-
-

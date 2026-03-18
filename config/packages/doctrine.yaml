@@ -7,14 +7,10 @@ parameters:
 
 doctrine:
     dbal:
-        # configure these for your database server
-        driver: 'pdo_mysql'
-        server_version: '5.7'
-        charset: utf8mb4
-        default_table_options:
-            charset: utf8mb4
-            collate: utf8mb4_unicode_ci
-
+        # Configure the database connection through DATABASE_URL.
+        # SQLite is the default in .env.dist for lightweight local development.
+        # For MySQL, include serverVersion and charset in the URL, for example:
+        # mysql://user:password@127.0.0.1:3306/dbname?serverVersion=8.0.36&charset=utf8mb4
         url: '%env(resolve:DATABASE_URL)%'
     orm:
         auto_generate_proxy_classes: '%kernel.debug%'
