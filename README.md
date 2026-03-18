@@ -17,29 +17,39 @@ It’s as simple as that!
 
 Curious to see how it works? Check out our Demo at https://demo.strichliste.org
 
+## Installation and setup
 
-### Recommended workflow
+Choose the section that matches your environment:
 
-The backend supports both SQLite and MySQL for local development. SQLite is
-lightweight and easy to start with, while MySQL is a good fit when you want to
-mirror a production-like database setup. Choose whichever option matches your
-workflow.
+1. [Local development on a regular Linux/macOS environment](#local-development-on-a-regular-linuxmacos-environment)
+2. [Local development on Fedora Silverblue with VS Code and toolbox](#local-development-on-fedora-silverblue-with-vs-code-and-toolbox)
+3. [Production environment](#production-environment)
+4. [Optional Ansible/Vagrant workflow](#ansiblevagrant)
 
-1. Install the PHP dependencies:
+### Local development on a regular Linux/macOS environment
+
+Use this workflow when you want to run the backend directly on your machine.
+SQLite is the simplest option for getting started, while MySQL is useful when
+you want local development to resemble production more closely.
+
+1. Install the required tools:
+   - PHP with the extensions needed by this project
+   - Composer
+   - Either SQLite or MySQL, depending on the database you want to use
+2. Install the PHP dependencies:
 
    ```bash
    composer install
    ```
 
-2. Create a local environment file:
+3. Create a local environment file:
 
    ```bash
    cp .env.dist .env
    ```
 
-3. Pick one database option and set `DATABASE_URL` accordingly:
-
-   - **SQLite** (default in `.env`):
+4. Pick one database option and set `DATABASE_URL` accordingly:
+   - **SQLite** (default in `.env.dist`):
 
      ```dotenv
      DATABASE_URL="sqlite:///%kernel.project_dir%/var/data.db"
@@ -51,66 +61,66 @@ workflow.
      DATABASE_URL="mysql://strichliste:32YourPassWord42@127.0.0.1:3306/strichliste?serverVersion=8.0.36&charset=utf8mb4"
      ```
 
-4. Create the database schema:
+5. Create the database schema:
 
    ```bash
    mkdir -p var
    php bin/console doctrine:schema:create
    ```
 
-5. Start the application with your usual local Symfony/PHP web server setup.
+6. Start the application with your usual local Symfony or PHP web server setup.
 
-### Fedora Silverblue + VS Code
+### Local development on Fedora Silverblue with VS Code and toolbox
 
-Fedora Silverblue uses an immutable base system, so the easiest way to work on
-this project in VS Code is to install the development tools inside a
-`toolbox` container and open the repository from there.
+Use this workflow when you develop on an immutable OS such as Fedora
+Silverblue. The recommended approach is to keep the host system untouched,
+install the development tools inside a `toolbox` container, and open the
+repository from VS Code in that toolbox-backed environment.
 
-1. Create and enter a toolbox for development:
+1. Create and enter a dedicated toolbox:
 
    ```bash
    toolbox create --container strichliste-dev
    toolbox enter strichliste-dev
    ```
 
-2. Install PHP, Composer, and the database support you want inside the toolbox:
+2. Install the development tools inside the toolbox.
 
-   - **SQLite**
+   For **SQLite**:
 
-     ```bash
-     sudo dnf install -y php php-cli php-sqlite php-xml php-mbstring php-json php-intl php-zip composer sqlite
-     ```
+   ```bash
+   sudo dnf install -y php php-cli php-sqlite php-xml php-mbstring php-json php-intl php-zip composer sqlite
+   ```
 
-   - **MySQL**
+   For **MySQL**:
 
-     ```bash
-     sudo dnf install -y php php-cli php-mysqlnd php-xml php-mbstring php-json php-intl php-zip composer community-mysql community-mysql-server
-     ```
+   ```bash
+   sudo dnf install -y php php-cli php-mysqlnd php-xml php-mbstring php-json php-intl php-zip composer community-mysql community-mysql-server
+   ```
 
-3. Verify that the tools are available for your chosen setup:
+3. Verify the toolbox has the expected tools available:
 
    ```bash
    php -v
    composer --version
    ```
 
-   For SQLite also check:
+   For SQLite, also verify:
 
    ```bash
    sqlite3 --version
    ```
 
-   For MySQL also check:
+   For MySQL, also verify:
 
    ```bash
    mysql --version
    ```
 
-4. In VS Code, install the Remote - Containers / Dev Containers or Toolbox
-   workflow you prefer, then open a terminal that runs inside the toolbox and
-   continue with the project setup there.
+4. Open the repository in VS Code using your preferred toolbox-compatible
+   workflow, then open a terminal inside the toolbox.
 
-5. Install the PHP dependencies for this project:
+5. Install the project dependencies:
 
    ```bash
    composer install
@@ -122,18 +132,18 @@ this project in VS Code is to install the development tools inside a
    cp .env.dist .env
    ```
 
-7. Configure `.env` for either SQLite or MySQL, then create the schema:
+7. Configure `.env` for your chosen database:
+   - **SQLite**: keep the default `DATABASE_URL` from `.env.dist`.
+   - **MySQL**: replace `DATABASE_URL` with your MySQL connection string.
 
-   - **SQLite** keeps the default `DATABASE_URL` from `.env.dist`.
-   - **MySQL** should replace `DATABASE_URL` with your local or remote MySQL
-     connection string.
+8. Create the database schema:
 
    ```bash
    mkdir -p var
    php bin/console doctrine:schema:create
    ```
 
-8. Start the local PHP server:
+9. Start the local PHP server:
 
    ```bash
    php -S 127.0.0.1:8000 -t public
@@ -141,6 +151,39 @@ this project in VS Code is to install the development tools inside a
 
    You can then open `http://127.0.0.1:8000` in your browser.
 
+### Production environment
+
+Use this workflow when you want to deploy the backend for real users instead of
+running it as a local development setup.
+
+1. Provision the target system with:
+   - PHP and the required PHP extensions
+   - Composer
+   - A web server or PHP application runtime suitable for Symfony deployments
+   - A production database server, typically MySQL
+2. Deploy the project files to the server.
+3. Install the PHP dependencies:
+
+   ```bash
+   composer install --no-dev --optimize-autoloader
+   ```
+
+4. Create the environment configuration for production. Start from `.env.dist`
+   and provide a production `DATABASE_URL` and any other environment-specific
+   settings through your deployment process.
+5. Prepare the database and application data directory:
+
+   ```bash
+   mkdir -p var
+   php bin/console doctrine:schema:create --env=prod
+   ```
+
+6. Configure your web server or PHP runtime to serve the application from the
+   `public/` directory.
+7. Start or reload the production services.
+
+If you want to automate provisioning, the `contrib/ansible` directory contains
+an example Ansible-based setup.
 
 ### Ansible/Vagrant
 
@@ -152,7 +195,6 @@ development in VS Code.
 ## API Documentation
 
 For a full documentation or the strichliste2 API, please see the API.md file.
-
 
 ## Config Documentation
 
