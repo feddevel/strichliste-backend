@@ -42,6 +42,76 @@ Curious to see how it works? Check out our Demo at https://demo.strichliste.org
 
 5. Start the application with your usual local Symfony/PHP web server setup.
 
+### Fedora Silverblue + VS Code
+
+Fedora Silverblue uses an immutable base system, so the easiest way to work on
+this project in VS Code is to install the development tools inside a
+`toolbox` container and open the repository from there.
+
+1. Create and enter a toolbox for development:
+
+   ```bash
+   toolbox create --container strichliste-dev
+   toolbox enter strichliste-dev
+   ```
+
+2. Install PHP, Composer and MySQL client/server packages inside the toolbox:
+
+   ```bash
+   sudo dnf install -y php php-cli php-mysqlnd php-xml php-mbstring php-json php-intl php-zip composer community-mysql community-mysql-server
+   ```
+
+3. Verify that the tools are available:
+
+   ```bash
+   php -v
+   composer --version
+   mysql --version
+   ```
+
+4. In VS Code, install the Remote - Containers / Dev Containers or Toolbox
+   workflow you prefer, then open a terminal that runs inside the toolbox and
+   continue with the project setup there.
+
+5. Install the PHP dependencies for this project:
+
+   ```bash
+   composer install
+   ```
+
+6. Create your local environment file:
+
+   ```bash
+   cp .env.dist .env
+   ```
+
+7. Start MySQL inside the toolbox and create a database for the application:
+
+   ```bash
+   sudo mkdir -p /var/lib/mysql
+   sudo mysql_install_db --user=$(whoami) --datadir=/var/lib/mysql
+   mysqld_safe --datadir=/var/lib/mysql &
+   mysql -u root -e "CREATE DATABASE strichliste CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+   ```
+
+   If you already manage MySQL elsewhere, you can skip the local server setup
+   and just point `DATABASE_URL` to that instance.
+
+8. Edit `.env` and configure `DATABASE_URL`, for example:
+
+   ```dotenv
+   DATABASE_URL="mysql://root:@127.0.0.1:3306/strichliste?serverVersion=8.0"
+   ```
+
+9. Create the schema and start the local PHP server:
+
+   ```bash
+   php bin/console doctrine:schema:create
+   php -S 127.0.0.1:8000 -t public
+   ```
+
+   You can then open `http://127.0.0.1:8000` in your browser.
+
 ### Ansible/Vagrant
 
 The `contrib/ansible` directory contains an optional Ansible + Vagrant setup for
