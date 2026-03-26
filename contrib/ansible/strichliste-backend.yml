@@ -3,23 +3,46 @@
   gather_facts: False
   become: True
   become_user: root
+  vars:
+      database_driver: sqlite
+      database_name: strichliste
+      database_user: strichliste
+      database_password: 32YourPassWord42
+      sqlite_database_path: /opt/strichliste2-backend/var/app.db
   tasks:
-      - name: install dependencies
+      - name: install base dependencies
         apt:
             name: "{{ item }}"
             state: present
         with_items:
-            - git 
-            - curl  
+            - git
+            - curl
             - unzip
-            - sqlite3
-            - php 
-            - php-cli 
+            - php
+            - php-cli
             - php-xml
             - php-zip
-            - php-sqlite3
             - nginx
             - php-fpm
+
+      - name: install sqlite dependencies
+        apt:
+            name: "{{ item }}"
+            state: present
+        with_items:
+            - sqlite3
+            - php-sqlite3
+        when: database_driver == 'sqlite'
+
+      - name: install mysql dependencies
+        apt:
+            name: "{{ item }}"
+            state: present
+        with_items:
+            - mariadb-server
+            - default-mysql-client
+            - php-mysql
+        when: database_driver == 'mysql'
 
       - name: copy nginx vhost config
         copy:
@@ -29,35 +52,90 @@
             mode: 0644
 
       - name: remove default nginx vhost file
-        file: 
+        file:
             dest: /etc/nginx/sites-enabled/default
             state: absent
-      
+
       - name: clone backend code
-        git: 
+        git:
             repo: https://github.com/strichliste/server.git
             dest: /opt/strichliste2-backend
             update: True
-      
-      
+
+      - name: configure sqlite database url
+        copy:
+            dest: /opt/strichliste2-backend/.env.local
+            content: 'DATABASE_URL="sqlite:////opt/strichliste2-backend/var/app.db"\n'
+            owner: root
+            mode: 0644
+        when: database_driver == 'sqlite'
+
+      - name: configure mysql database url
+        copy:
+            dest: /opt/strichliste2-backend/.env.local
+            content: 'DATABASE_URL="mysql://{{ database_user }}:{{ database_password }}@127.0.0.1/{{ database_name }}"\n'
+            owner: root
+            mode: 0644
+        when: database_driver == 'mysql'
+
+      - name: ensure var directory exists for sqlite
+        file:
+            path: /opt/strichliste2-backend/var
+            state: directory
+            owner: root
+            group: root
+            mode: 0755
+        when: database_driver == 'sqlite'
+
+      - name: copy sqlite schema ddl
+        copy:
+            src: files/sqlite-schema.sql
+            dest: /tmp/strichliste-sqlite-schema.sql
+            owner: root
+            mode: 0644
+        when: database_driver == 'sqlite'
+
+      - name: initialize sqlite schema before composer installation
+        shell: sqlite3 {{ sqlite_database_path }} < /tmp/strichliste-sqlite-schema.sql
+        args:
+            creates: "{{ sqlite_database_path }}"
+        when: database_driver == 'sqlite'
+
+      - name: ensure mysql service is running
+        service:
+            name: mariadb
+            state: started
+            enabled: true
+        when: database_driver == 'mysql'
+
+      - name: copy mysql schema ddl
+        copy:
+            src: files/mysql-schema.sql
+            dest: /tmp/strichliste-mysql-schema.sql
+            owner: root
+            mode: 0644
+        when: database_driver == 'mysql'
+
+      - name: initialize mysql database before composer installation
+        shell: |
+            mysql -e "CREATE DATABASE IF NOT EXISTS {{ database_name }} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+            mysql -e "CREATE USER IF NOT EXISTS '{{ database_user }}'@'localhost' IDENTIFIED BY '{{ database_password }}';"
+            mysql -e "GRANT ALL PRIVILEGES ON {{ database_name }}.* TO '{{ database_user }}'@'localhost'; FLUSH PRIVILEGES;"
+            mysql {{ database_name }} < /tmp/strichliste-mysql-schema.sql
+        when: database_driver == 'mysql'
+
       - name: install composer
         shell: |
-            curl -sS https://getcomposer.org/installer | 
+            curl -sS https://getcomposer.org/installer |
             php -- --install-dir=/usr/local/bin --filename=composer
         args:
             creates: /usr/local/bin/composer
-      
+
       - name: install php dependencies
         shell: composer install
-        args: 
+        args:
           chdir: /opt/strichliste2-backend
           creates: /opt/strichliste2-backend/vendor
-
-      - name: create database schema
-        shell: php bin/console doctrine:schema:create
-        args: 
-          chdir: /opt/strichliste2-backend
-          creates: /opt/strichliste2-backend/var/app.db
 
       - name: set file permissions for php backend
         file:
@@ -67,13 +145,12 @@
           mode: 0755
           recurse: True
 
-      - name: restart nginx 
-        service: 
+      - name: restart nginx
+        service:
             name: nginx
             state: restarted
-      
-      - name: restart php-fpm 
-        service: 
+
+      - name: restart php-fpm
+        service:
             name: php7.3-fpm
             state: restarted
-      
