@@ -5,3 +5,5 @@ For an detailed API documentation please consulte the API.md file. All commands 
 All the configuration parameters which are also used by the frontend are explained in the Config.md file
 
 *Hint*: The database driver configuration can be found in the `.env.dist` file. MySql is default.
+
+*Hint*: `composer install` runs Symfony auto-scripts (including `cache:clear`), which boot the app and require a valid, reachable `DATABASE_URL`. For local setup you can point to SQLite (`sqlite:///%kernel.project_dir%/var/data.db`) or ensure MySQL is running and reachable.
